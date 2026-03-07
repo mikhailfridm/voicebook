@@ -51,13 +51,13 @@ prepare_data() {
     "file_name": "dpo_train.jsonl",
     "formatting": "sharegpt",
     "ranking": true,
-    "columns": {"conversations": "conversations", "chosen": "chosen", "rejected": "rejected"}
+    "columns": {"messages": "conversations", "chosen": "chosen", "rejected": "rejected"}
   },
   "dpo_eval": {
     "file_name": "dpo_eval.jsonl",
     "formatting": "sharegpt",
     "ranking": true,
-    "columns": {"conversations": "conversations", "chosen": "chosen", "rejected": "rejected"}
+    "columns": {"messages": "conversations", "chosen": "chosen", "rejected": "rejected"}
   }
 }
 DINFO
