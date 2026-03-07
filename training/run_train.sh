@@ -39,13 +39,13 @@ prepare_data() {
   "train": {
     "file_name": "train.jsonl",
     "formatting": "sharegpt",
-    "columns": {"messages": "messages"},
+    "columns": {"conversations": "messages"},
     "tags": {"role_tag": "role", "content_tag": "content", "user_tag": "user", "assistant_tag": "assistant", "system_tag": "system", "function_tag": "function_call", "observation_tag": "observation"}
   },
   "eval": {
     "file_name": "eval.jsonl",
     "formatting": "sharegpt",
-    "columns": {"messages": "messages"},
+    "columns": {"conversations": "messages"},
     "tags": {"role_tag": "role", "content_tag": "content", "user_tag": "user", "assistant_tag": "assistant", "system_tag": "system", "function_tag": "function_call", "observation_tag": "observation"}
   },
   "dpo_train": {

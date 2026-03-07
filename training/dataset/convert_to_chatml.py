@@ -53,6 +53,17 @@ def transform_messages(messages: list[dict]) -> list[dict]:
         else:
             result.append({"role": role, "content": msg.get("content", "")})
 
+    # LLaMA-Factory requires first non-system message to be from user.
+    # Our dialogs start with assistant greeting. Insert a trigger user message.
+    first_non_system = 0
+    for i, m in enumerate(result):
+        if m["role"] != "system":
+            first_non_system = i
+            break
+
+    if result[first_non_system]["role"] == "assistant":
+        result.insert(first_non_system, {"role": "user", "content": "[Входящий звонок]"})
+
     return result
 
 
