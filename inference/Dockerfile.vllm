@@ -1,0 +1,22 @@
+FROM nvidia/cuda:12.1.1-runtime-ubuntu22.04
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 python3-pip git \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip3 install --no-cache-dir vllm>=0.4
+
+WORKDIR /app
+
+EXPOSE 8100
+
+# Model is mounted via volume at /models/voicebook-qwen2.5-7b
+CMD ["python3", "-m", "vllm.entrypoints.openai.api_server", \
+     "--model", "/models/voicebook-qwen2.5-14b", \
+     "--served-model-name", "voicebook", \
+     "--host", "0.0.0.0", \
+     "--port", "8100", \
+     "--max-model-len", "2048", \
+     "--enable-auto-tool-choice", \
+     "--tool-call-parser", "hermes", \
+     "--dtype", "bfloat16"]

@@ -1,0 +1,10 @@
+torch>=2.1
+transformers>=4.37
+peft>=0.7
+trl>=0.7
+bitsandbytes>=0.42
+datasets
+accelerate
+llamafactory>=0.9
+sentencepiece
+protobuf

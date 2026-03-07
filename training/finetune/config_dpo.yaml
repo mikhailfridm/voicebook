@@ -1,0 +1,40 @@
+### LLaMA-Factory DPO config for VoiceBook (Stage 2)
+### Run AFTER SFT: llamafactory-cli train config_dpo.yaml
+
+### Model — load the SFT-trained model
+model_name_or_path: Qwen/Qwen2.5-14B-Instruct
+adapter_name_or_path: ../../models/voicebook-lora
+trust_remote_code: true
+
+### Method
+stage: dpo
+do_train: true
+finetuning_type: lora
+lora_rank: 8
+lora_alpha: 16
+lora_target: q_proj,k_proj,v_proj,o_proj
+lora_dropout: 0.05
+pref_beta: 0.1
+
+### Dataset
+dataset_dir: ../dataset/processed
+dataset: dpo_train
+eval_dataset: dpo_eval
+template: qwen
+cutoff_len: 2048
+
+### Training
+per_device_train_batch_size: 2
+gradient_accumulation_steps: 8
+learning_rate: 5.0e-5
+num_train_epochs: 2
+lr_scheduler_type: cosine
+warmup_ratio: 0.1
+bf16: true
+logging_steps: 10
+save_steps: 50
+eval_steps: 50
+
+### Output
+output_dir: ../../models/voicebook-dpo
+report_to: none
