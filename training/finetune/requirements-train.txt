@@ -1,4 +1,4 @@
-torch>=2.1
+torch>=2.6
 transformers>=4.37
 peft>=0.7
 trl>=0.7

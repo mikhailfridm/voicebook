@@ -39,4 +39,5 @@ eval_strategy: steps
 
 ### Output
 output_dir: /workspace/voicebook/models/voicebook-lora
+overwrite_output_dir: true
 report_to: none

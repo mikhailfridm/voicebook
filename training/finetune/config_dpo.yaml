@@ -37,4 +37,5 @@ eval_steps: 50
 
 ### Output
 output_dir: /workspace/voicebook/models/voicebook-dpo
+overwrite_output_dir: true
 report_to: none
