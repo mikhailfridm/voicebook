@@ -1,7 +1,7 @@
 """
-Convert raw generated dialogs and intent pairs into Qwen2.5 ChatML format.
+Convert raw generated dialogs and intent pairs into LLaMA-Factory sharegpt format.
 
-Combines dialogs + intent pairs, validates format, splits into train/eval.
+Transforms OpenAI-style tool_calls into LLaMA-Factory's function_call/observation format.
 
 Usage:
     python convert_to_chatml.py \
@@ -22,30 +22,47 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def validate_message(msg: dict) -> bool:
-    """Check that a message has valid structure."""
-    role = msg.get("role")
-    if role not in ("system", "user", "assistant", "tool"):
-        return False
-    if role == "assistant":
-        # Must have content or tool_calls
-        if not msg.get("content") and not msg.get("tool_calls"):
-            return False
-    if role == "tool":
-        if "content" not in msg:
-            return False
-    return True
+def transform_messages(messages: list[dict]) -> list[dict]:
+    """Transform OpenAI-style messages to LLaMA-Factory sharegpt format.
+
+    - assistant with tool_calls → assistant content + function_call messages
+    - tool messages → observation messages
+    """
+    result = []
+    for msg in messages:
+        role = msg.get("role")
+
+        if role == "assistant" and msg.get("tool_calls"):
+            # If assistant has text content, add it first
+            content = msg.get("content", "")
+            if content:
+                result.append({"role": "assistant", "content": content})
+
+            # Add each tool call as a function_call message
+            for tc in msg["tool_calls"]:
+                fn = tc.get("function", {})
+                fn_content = json.dumps({
+                    "name": fn.get("name", ""),
+                    "arguments": json.loads(fn["arguments"]) if isinstance(fn.get("arguments"), str) else fn.get("arguments", {}),
+                }, ensure_ascii=False)
+                result.append({"role": "function_call", "content": fn_content})
+
+        elif role == "tool":
+            result.append({"role": "observation", "content": msg.get("content", "")})
+
+        else:
+            result.append({"role": role, "content": msg.get("content", "")})
+
+    return result
 
 
-def validate_example(example: dict) -> bool:
-    """Validate a complete training example."""
-    messages = example.get("messages", [])
+def validate_transformed(messages: list[dict]) -> bool:
+    """Check that transformed messages are valid for LLaMA-Factory."""
     if len(messages) < 2:
         return False
-    for msg in messages:
-        if not validate_message(msg):
-            return False
-    return True
+    has_user = any(m["role"] == "user" for m in messages)
+    has_assistant = any(m["role"] == "assistant" for m in messages)
+    return has_user and has_assistant
 
 
 def extract_intents(example: dict) -> list[str]:
@@ -69,6 +86,7 @@ def main(dialogs_path: str, intents_path: str, output_dir: str, dpo_path: str = 
     output.mkdir(parents=True, exist_ok=True)
 
     all_examples = []
+    raw_examples = []
 
     # Load dialogs
     if Path(dialogs_path).exists():
@@ -78,10 +96,12 @@ def main(dialogs_path: str, intents_path: str, output_dir: str, dpo_path: str = 
                 if not line:
                     continue
                 example = json.loads(line)
-                if validate_example(example):
-                    all_examples.append(example)
+                raw_examples.append(example)
+                transformed = transform_messages(example.get("messages", []))
+                if validate_transformed(transformed):
+                    all_examples.append({"messages": transformed})
                 else:
-                    logger.warning(f"Invalid dialog example, skipping")
+                    logger.warning("Invalid dialog after transform, skipping")
         logger.info(f"Loaded {len(all_examples)} valid dialogs")
 
     # Load intent pairs
@@ -93,16 +113,17 @@ def main(dialogs_path: str, intents_path: str, output_dir: str, dpo_path: str = 
                 if not line:
                     continue
                 example = json.loads(line)
-                if validate_example(example):
-                    all_examples.append(example)
+                transformed = transform_messages(example.get("messages", []))
+                if validate_transformed(transformed):
+                    all_examples.append({"messages": transformed})
                     intent_count += 1
         logger.info(f"Loaded {intent_count} valid intent pairs")
 
     logger.info(f"Total examples: {len(all_examples)}")
 
-    # Analyze intent distribution
+    # Analyze intent distribution from raw examples
     intent_counter = Counter()
-    for ex in all_examples:
+    for ex in raw_examples:
         for intent in extract_intents(ex):
             intent_counter[intent] += 1
 

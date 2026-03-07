@@ -40,13 +40,13 @@ prepare_data() {
     "file_name": "train.jsonl",
     "formatting": "sharegpt",
     "columns": {"messages": "messages"},
-    "tags": {"role_tag": "role", "content_tag": "content", "user_tag": "user", "assistant_tag": "assistant", "system_tag": "system", "function_tag": "tool", "observation_tag": "tool"}
+    "tags": {"role_tag": "role", "content_tag": "content", "user_tag": "user", "assistant_tag": "assistant", "system_tag": "system", "function_tag": "function_call", "observation_tag": "observation"}
   },
   "eval": {
     "file_name": "eval.jsonl",
     "formatting": "sharegpt",
     "columns": {"messages": "messages"},
-    "tags": {"role_tag": "role", "content_tag": "content", "user_tag": "user", "assistant_tag": "assistant", "system_tag": "system", "function_tag": "tool", "observation_tag": "tool"}
+    "tags": {"role_tag": "role", "content_tag": "content", "user_tag": "user", "assistant_tag": "assistant", "system_tag": "system", "function_tag": "function_call", "observation_tag": "observation"}
   },
   "dpo_train": {
     "file_name": "dpo_train.jsonl",
