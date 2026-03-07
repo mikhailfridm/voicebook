@@ -72,7 +72,10 @@ def transform_messages(messages: list[dict]) -> list[dict]:
 
 
 def transform_dpo(example: dict) -> dict:
-    """Transform DPO pair to sharegpt format."""
+    """Transform DPO pair to sharegpt format.
+
+    LLaMA-Factory expects chosen/rejected as single message dicts, not lists.
+    """
     prompt = []
     for msg in example.get("prompt", []):
         role = ROLE_MAP.get(msg["role"], msg["role"])
@@ -87,8 +90,12 @@ def transform_dpo(example: dict) -> dict:
     if prompt and prompt[first_non_system]["from"] != "human":
         prompt.insert(first_non_system, {"from": "human", "value": "[Входящий звонок]"})
 
-    chosen = [{"from": ROLE_MAP.get(m["role"], m["role"]), "value": m["content"]} for m in example.get("chosen", [])]
-    rejected = [{"from": ROLE_MAP.get(m["role"], m["role"]), "value": m["content"]} for m in example.get("rejected", [])]
+    # chosen/rejected must be single message dicts
+    chosen_msgs = example.get("chosen", [])
+    rejected_msgs = example.get("rejected", [])
+
+    chosen = {"from": "gpt", "value": chosen_msgs[0]["content"]} if chosen_msgs else {"from": "gpt", "value": ""}
+    rejected = {"from": "gpt", "value": rejected_msgs[0]["content"]} if rejected_msgs else {"from": "gpt", "value": ""}
 
     return {"conversations": prompt, "chosen": chosen, "rejected": rejected}
 
