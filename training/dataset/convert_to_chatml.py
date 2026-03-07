@@ -1,7 +1,8 @@
 """
-Convert raw generated dialogs and intent pairs into LLaMA-Factory sharegpt format.
+Convert raw generated dialogs into LLaMA-Factory default sharegpt format.
 
-Transforms OpenAI-style tool_calls into LLaMA-Factory's function_call/observation format.
+Output format per message: {"from": "human/gpt/system/function_call/observation", "value": "..."}
+Key: "conversations" (LLaMA-Factory default)
 
 Usage:
     python convert_to_chatml.py \
@@ -21,63 +22,84 @@ from collections import Counter
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Map our roles to LLaMA-Factory sharegpt defaults
+ROLE_MAP = {
+    "system": "system",
+    "user": "human",
+    "assistant": "gpt",
+    "function_call": "function_call",
+    "observation": "observation",
+}
+
 
 def transform_messages(messages: list[dict]) -> list[dict]:
-    """Transform OpenAI-style messages to LLaMA-Factory sharegpt format.
-
-    - assistant with tool_calls → assistant content + function_call messages
-    - tool messages → observation messages
-    """
+    """Transform OpenAI-style messages to LLaMA-Factory default sharegpt format."""
     result = []
     for msg in messages:
         role = msg.get("role")
 
         if role == "assistant" and msg.get("tool_calls"):
-            # If assistant has text content, add it first
             content = msg.get("content", "")
             if content:
-                result.append({"role": "assistant", "content": content})
+                result.append({"from": "gpt", "value": content})
 
-            # Add each tool call as a function_call message
             for tc in msg["tool_calls"]:
                 fn = tc.get("function", {})
                 fn_content = json.dumps({
                     "name": fn.get("name", ""),
                     "arguments": json.loads(fn["arguments"]) if isinstance(fn.get("arguments"), str) else fn.get("arguments", {}),
                 }, ensure_ascii=False)
-                result.append({"role": "function_call", "content": fn_content})
+                result.append({"from": "function_call", "value": fn_content})
 
         elif role == "tool":
-            result.append({"role": "observation", "content": msg.get("content", "")})
+            result.append({"from": "observation", "value": msg.get("content", "")})
 
         else:
-            result.append({"role": role, "content": msg.get("content", "")})
+            sharegpt_role = ROLE_MAP.get(role, role)
+            result.append({"from": sharegpt_role, "value": msg.get("content", "")})
 
-    # LLaMA-Factory requires first non-system message to be from user.
-    # Our dialogs start with assistant greeting. Insert a trigger user message.
+    # LLaMA-Factory requires first non-system message to be "human".
     first_non_system = 0
     for i, m in enumerate(result):
-        if m["role"] != "system":
+        if m["from"] != "system":
             first_non_system = i
             break
 
-    if result[first_non_system]["role"] == "assistant":
-        result.insert(first_non_system, {"role": "user", "content": "[Входящий звонок]"})
+    if result[first_non_system]["from"] == "gpt":
+        result.insert(first_non_system, {"from": "human", "value": "[Входящий звонок]"})
 
     return result
 
 
+def transform_dpo(example: dict) -> dict:
+    """Transform DPO pair to sharegpt format."""
+    prompt = []
+    for msg in example.get("prompt", []):
+        role = ROLE_MAP.get(msg["role"], msg["role"])
+        prompt.append({"from": role, "value": msg["content"]})
+
+    # Ensure prompt starts with human
+    first_non_system = 0
+    for i, m in enumerate(prompt):
+        if m["from"] != "system":
+            first_non_system = i
+            break
+    if prompt and prompt[first_non_system]["from"] != "human":
+        prompt.insert(first_non_system, {"from": "human", "value": "[Входящий звонок]"})
+
+    chosen = [{"from": ROLE_MAP.get(m["role"], m["role"]), "value": m["content"]} for m in example.get("chosen", [])]
+    rejected = [{"from": ROLE_MAP.get(m["role"], m["role"]), "value": m["content"]} for m in example.get("rejected", [])]
+
+    return {"conversations": prompt, "chosen": chosen, "rejected": rejected}
+
+
 def validate_transformed(messages: list[dict]) -> bool:
-    """Check that transformed messages are valid for LLaMA-Factory."""
-    if len(messages) < 2:
-        return False
-    has_user = any(m["role"] == "user" for m in messages)
-    has_assistant = any(m["role"] == "assistant" for m in messages)
-    return has_user and has_assistant
+    has_human = any(m["from"] == "human" for m in messages)
+    has_gpt = any(m["from"] == "gpt" for m in messages)
+    return len(messages) >= 2 and has_human and has_gpt
 
 
 def extract_intents(example: dict) -> list[str]:
-    """Extract all intents from tool calls in an example."""
     intents = []
     for msg in example.get("messages", []):
         for tc in msg.get("tool_calls", []):
@@ -110,7 +132,7 @@ def main(dialogs_path: str, intents_path: str, output_dir: str, dpo_path: str = 
                 raw_examples.append(example)
                 transformed = transform_messages(example.get("messages", []))
                 if validate_transformed(transformed):
-                    all_examples.append({"messages": transformed})
+                    all_examples.append({"conversations": transformed})
                 else:
                     logger.warning("Invalid dialog after transform, skipping")
         logger.info(f"Loaded {len(all_examples)} valid dialogs")
@@ -126,13 +148,13 @@ def main(dialogs_path: str, intents_path: str, output_dir: str, dpo_path: str = 
                 example = json.loads(line)
                 transformed = transform_messages(example.get("messages", []))
                 if validate_transformed(transformed):
-                    all_examples.append({"messages": transformed})
+                    all_examples.append({"conversations": transformed})
                     intent_count += 1
         logger.info(f"Loaded {intent_count} valid intent pairs")
 
     logger.info(f"Total examples: {len(all_examples)}")
 
-    # Analyze intent distribution from raw examples
+    # Analyze intent distribution
     intent_counter = Counter()
     for ex in raw_examples:
         for intent in extract_intents(ex):
@@ -148,7 +170,6 @@ def main(dialogs_path: str, intents_path: str, output_dir: str, dpo_path: str = 
     train_set = all_examples[:split_idx]
     eval_set = all_examples[split_idx:]
 
-    # Save
     train_path = output / "train.jsonl"
     eval_path = output / "eval.jsonl"
 
@@ -163,7 +184,7 @@ def main(dialogs_path: str, intents_path: str, output_dir: str, dpo_path: str = 
     logger.info(f"Train: {len(train_set)} examples -> {train_path}")
     logger.info(f"Eval: {len(eval_set)} examples -> {eval_path}")
 
-    # Process DPO pairs if provided
+    # Process DPO pairs
     if dpo_path and Path(dpo_path).exists():
         dpo_examples = []
         with open(dpo_path, encoding="utf-8") as f:
@@ -173,7 +194,7 @@ def main(dialogs_path: str, intents_path: str, output_dir: str, dpo_path: str = 
                     continue
                 ex = json.loads(line)
                 if "prompt" in ex and "chosen" in ex and "rejected" in ex:
-                    dpo_examples.append(ex)
+                    dpo_examples.append(transform_dpo(ex))
 
         random.shuffle(dpo_examples)
         dpo_split = int(len(dpo_examples) * 0.9)
