@@ -15,7 +15,7 @@ lora_target: q_proj,k_proj,v_proj,o_proj,gate_proj,up_proj,down_proj
 lora_dropout: 0.05
 
 ### Dataset
-dataset_dir: ../dataset/processed
+dataset_dir: /workspace/voicebook/training/dataset/processed
 dataset: train
 eval_dataset: eval
 template: qwen
@@ -38,5 +38,5 @@ per_device_eval_batch_size: 4
 eval_strategy: steps
 
 ### Output
-output_dir: ../../models/voicebook-lora
+output_dir: /workspace/voicebook/models/voicebook-lora
 report_to: none

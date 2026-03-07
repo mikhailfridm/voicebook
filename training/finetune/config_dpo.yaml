@@ -3,7 +3,7 @@
 
 ### Model — load the SFT-trained model
 model_name_or_path: Qwen/Qwen2.5-14B-Instruct
-adapter_name_or_path: ../../models/voicebook-lora
+adapter_name_or_path: /workspace/voicebook/models/voicebook-lora
 trust_remote_code: true
 
 ### Method
@@ -17,7 +17,7 @@ lora_dropout: 0.05
 pref_beta: 0.1
 
 ### Dataset
-dataset_dir: ../dataset/processed
+dataset_dir: /workspace/voicebook/training/dataset/processed
 dataset: dpo_train
 eval_dataset: dpo_eval
 template: qwen
@@ -36,5 +36,5 @@ save_steps: 50
 eval_steps: 50
 
 ### Output
-output_dir: ../../models/voicebook-dpo
+output_dir: /workspace/voicebook/models/voicebook-dpo
 report_to: none

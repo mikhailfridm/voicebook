@@ -13,53 +13,49 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-cd "$SCRIPT_DIR"
+DATASET_DIR="$SCRIPT_DIR/dataset"
+FINETUNE_DIR="$SCRIPT_DIR/finetune"
+MODELS_DIR="$SCRIPT_DIR/../models"
 
 # ─── Step 0: Install dependencies ────────────────────────────────
 install_deps() {
     echo "=== Installing dependencies ==="
-    pip install -r finetune/requirements-train.txt
+    pip install -r "$FINETUNE_DIR/requirements-train.txt"
     echo "Done."
 }
 
 # ─── Step 1: Prepare dataset ─────────────────────────────────────
 prepare_data() {
     echo "=== Preparing dataset ==="
-    cd dataset
-    python convert_to_chatml.py \
-        --dialogs sft_dialogs.jsonl \
-        --intents raw/intent_pairs.jsonl \
-        --dpo dpo_pairs.jsonl \
-        --output-dir processed/
-    cd ..
+    python "$DATASET_DIR/convert_to_chatml.py" \
+        --dialogs "$DATASET_DIR/sft_dialogs.jsonl" \
+        --intents "$DATASET_DIR/raw/intent_pairs.jsonl" \
+        --dpo "$DATASET_DIR/dpo_pairs.jsonl" \
+        --output-dir "$DATASET_DIR/processed/"
     echo "=== Dataset ready ==="
 }
 
 # ─── Step 2: SFT Training ────────────────────────────────────────
 run_sft() {
     echo "=== Starting SFT training ==="
-    cd finetune
-    llamafactory-cli train config.yaml
-    cd ..
+    llamafactory-cli train "$FINETUNE_DIR/config.yaml"
     echo "=== SFT complete ==="
 }
 
 # ─── Step 3: DPO Training ────────────────────────────────────────
 run_dpo() {
     echo "=== Starting DPO training ==="
-    cd finetune
-    llamafactory-cli train config_dpo.yaml
-    cd ..
+    llamafactory-cli train "$FINETUNE_DIR/config_dpo.yaml"
     echo "=== DPO complete ==="
 }
 
 # ─── Step 4: Merge LoRA ──────────────────────────────────────────
 merge_model() {
     echo "=== Merging LoRA into base model ==="
-    cd finetune
-    python merge_lora.py
-    cd ..
-    echo "=== Merged model saved to models/voicebook-qwen2.5-14b ==="
+    python "$FINETUNE_DIR/merge_lora.py" \
+        --lora-path "$MODELS_DIR/voicebook-dpo" \
+        --output "$MODELS_DIR/voicebook-qwen2.5-14b"
+    echo "=== Merged model saved to $MODELS_DIR/voicebook-qwen2.5-14b ==="
 }
 
 # ─── Main ─────────────────────────────────────────────────────────
@@ -87,10 +83,10 @@ case "${1:-all}" in
         merge_model
         echo ""
         echo "=== Training pipeline complete! ==="
-        echo "Merged model: models/voicebook-qwen2.5-14b"
+        echo "Merged model: $MODELS_DIR/voicebook-qwen2.5-14b"
         echo ""
         echo "To serve with vLLM:"
-        echo "  vllm serve models/voicebook-qwen2.5-14b --dtype bfloat16 --max-model-len 4096"
+        echo "  vllm serve $MODELS_DIR/voicebook-qwen2.5-14b --dtype bfloat16 --max-model-len 4096"
         ;;
     *)
         echo "Usage: $0 {install|prepare|sft|dpo|merge|all}"
