@@ -32,6 +32,38 @@ prepare_data() {
         --intents "$DATASET_DIR/raw/intent_pairs.jsonl" \
         --dpo "$DATASET_DIR/dpo_pairs.jsonl" \
         --output-dir "$DATASET_DIR/processed/"
+
+    # Create dataset_info.json for LLaMA-Factory
+    cat > "$DATASET_DIR/processed/dataset_info.json" << 'DINFO'
+{
+  "train": {
+    "file_name": "train.jsonl",
+    "formatting": "sharegpt",
+    "columns": {"messages": "messages"},
+    "tags": {"role_tag": "role", "content_tag": "content", "user_tag": "user", "assistant_tag": "assistant", "system_tag": "system", "function_tag": "tool", "observation_tag": "tool"}
+  },
+  "eval": {
+    "file_name": "eval.jsonl",
+    "formatting": "sharegpt",
+    "columns": {"messages": "messages"},
+    "tags": {"role_tag": "role", "content_tag": "content", "user_tag": "user", "assistant_tag": "assistant", "system_tag": "system", "function_tag": "tool", "observation_tag": "tool"}
+  },
+  "dpo_train": {
+    "file_name": "dpo_train.jsonl",
+    "formatting": "sharegpt",
+    "ranking": true,
+    "columns": {"messages": "prompt", "chosen": "chosen", "rejected": "rejected"},
+    "tags": {"role_tag": "role", "content_tag": "content", "user_tag": "user", "assistant_tag": "assistant", "system_tag": "system"}
+  },
+  "dpo_eval": {
+    "file_name": "dpo_eval.jsonl",
+    "formatting": "sharegpt",
+    "ranking": true,
+    "columns": {"messages": "prompt", "chosen": "chosen", "rejected": "rejected"},
+    "tags": {"role_tag": "role", "content_tag": "content", "user_tag": "user", "assistant_tag": "assistant", "system_tag": "system"}
+  }
+}
+DINFO
     echo "=== Dataset ready ==="
 }
 
