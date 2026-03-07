@@ -17,6 +17,9 @@ DATASET_DIR="$SCRIPT_DIR/dataset"
 FINETUNE_DIR="$SCRIPT_DIR/finetune"
 MODELS_DIR="$SCRIPT_DIR/../models"
 
+# Store HF model cache on volume disk (container disk is too small)
+export HF_HOME=/workspace/hf_cache
+
 # ─── Step 0: Install dependencies ────────────────────────────────
 install_deps() {
     echo "=== Installing dependencies ==="
