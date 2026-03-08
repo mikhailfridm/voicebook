@@ -33,40 +33,81 @@ ROLE_MAP = {
 
 
 def transform_messages(messages: list[dict]) -> list[dict]:
-    """Transform OpenAI-style messages to LLaMA-Factory default sharegpt format."""
-    result = []
+    """Transform OpenAI-style messages to clean user/assistant sharegpt format.
+
+    Merges function_call/observation sequences into assistant turns.
+    This ensures ALL examples are valid for LLaMA-Factory training.
+    The model learns dialog flow and brevity; function calling relies
+    on Qwen2.5's built-in tool calling capability + system prompt.
+    """
+    # First pass: collect all messages with their roles
+    raw = []
     for msg in messages:
         role = msg.get("role")
-
         if role == "assistant" and msg.get("tool_calls"):
             content = msg.get("content", "")
-            if content:
-                result.append({"from": "gpt", "value": content})
-
+            # Format tool calls as text for training context
             for tc in msg["tool_calls"]:
                 fn = tc.get("function", {})
-                fn_content = json.dumps({
-                    "name": fn.get("name", ""),
-                    "arguments": json.loads(fn["arguments"]) if isinstance(fn.get("arguments"), str) else fn.get("arguments", {}),
-                }, ensure_ascii=False)
-                result.append({"from": "function_call", "value": fn_content})
-
+                fn_args = fn.get("arguments", "{}")
+                if isinstance(fn_args, str):
+                    fn_args = json.loads(fn_args)
+                fn_name = fn.get("name", "")
+                # Skip extract_intent calls (internal), keep API calls
+                if fn_name in ("check_slots", "create_booking", "cancel_booking", "lookup_client"):
+                    args_str = ", ".join(f"{k}={v}" for k, v in fn_args.items())
+                    if content:
+                        content += " "
+                    content += f"[{fn_name}({args_str})]"
+            raw.append({"role": "assistant", "content": content})
         elif role == "tool":
-            result.append({"from": "observation", "value": msg.get("content", "")})
-
+            # Include API results that contain useful data
+            tool_content = msg.get("content", "")
+            try:
+                data = json.loads(tool_content)
+                if "slots" in data:
+                    raw.append({"role": "tool_result", "content": tool_content})
+                # Skip simple {"status":"ok"} responses
+            except (json.JSONDecodeError, TypeError):
+                pass
         else:
-            sharegpt_role = ROLE_MAP.get(role, role)
-            result.append({"from": sharegpt_role, "value": msg.get("content", "")})
+            raw.append({"role": role, "content": msg.get("content", "")})
 
-    # LLaMA-Factory requires first non-system message to be "human".
+    # Second pass: merge into clean user/gpt alternation
+    result = []
+    for item in raw:
+        role = item["role"]
+        content = item.get("content", "")
+
+        if role == "system":
+            result.append({"from": "system", "value": content})
+        elif role == "user":
+            result.append({"from": "human", "value": content})
+        elif role == "assistant":
+            if not content:
+                continue  # skip empty assistant messages (pure tool calls)
+            # Merge with previous gpt message if exists
+            if result and result[-1]["from"] == "gpt":
+                result[-1]["value"] += " " + content
+            else:
+                result.append({"from": "gpt", "value": content})
+        elif role == "tool_result":
+            # Attach to previous gpt message as context
+            if result and result[-1]["from"] == "gpt":
+                result[-1]["value"] += " → " + content
+
+    # Ensure first non-system message is "human"
     first_non_system = 0
     for i, m in enumerate(result):
         if m["from"] != "system":
             first_non_system = i
             break
 
-    if result[first_non_system]["from"] == "gpt":
+    if result and result[first_non_system]["from"] == "gpt":
         result.insert(first_non_system, {"from": "human", "value": "[Входящий звонок]"})
+
+    # Clean up: remove empty values, strip whitespace
+    result = [{"from": m["from"], "value": m["value"].strip()} for m in result if m["value"].strip()]
 
     return result
 
