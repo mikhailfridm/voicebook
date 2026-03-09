@@ -21,8 +21,13 @@ class Settings(BaseSettings):
     yclients_user_token: str = ""
     yclients_company_id: str = ""
 
+    # Fish Speech TTS
+    fish_tts_base_url: str = "http://localhost:8080"
+    fish_tts_reference_id: str = ""  # saved voice model ID for cloning
+    tts_provider: str = "fish"  # "fish" or "yandex"
+
     # LLM
-    llm_provider: str = "openai"  # "openai", "yandexgpt", or "vllm"
+    llm_provider: str = "vllm"  # "openai", "yandexgpt", or "vllm"
     vllm_base_url: str = "http://localhost:8100/v1"
     vllm_model_name: str = "voicebook"
 

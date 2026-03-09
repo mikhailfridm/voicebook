@@ -11,6 +11,7 @@ services:
       - .env
     depends_on:
       - vllm
+      - fish-tts
     healthcheck:
       test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health').raise_for_status()"]
       interval: 30s
@@ -27,6 +28,25 @@ services:
       - "8100:8100"
     volumes:
       - ./models:/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  fish-tts:
+    image: fishaudio/fish-speech:latest-server-cuda
+    container_name: voicebook-fish-tts
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./models/fish-speech:/app/checkpoints
+      - ./models/fish-voices:/app/references
+    environment:
+      - COMPILE=1
     deploy:
       resources:
         reservations:

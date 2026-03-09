@@ -15,8 +15,10 @@ from app.core.state_machine import StateMachine, SessionContext, State, Intent
 from app.llm.agent import DialogAgent
 from app.booking.yclients import YclientsClient
 from app.stt.yandex_stt import YandexSTTStream
+from app.tts.fish_tts import FishTTSStream
 from app.tts.yandex_tts import YandexTTSStream
 from app.telephony.sip_handler import IncomingCall
+from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +113,7 @@ class CallOrchestrator:
 
         # Create per-call STT and TTS streams
         stt = YandexSTTStream()
-        tts = YandexTTSStream()
+        tts = FishTTSStream() if settings.tts_provider == "fish" else YandexTTSStream()
 
         try:
             await stt.connect()
