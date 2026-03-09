@@ -41,11 +41,12 @@ services:
     container_name: voicebook-chatterbox-tts
     restart: unless-stopped
     ports:
-      - "8150:8000"
+      - "8150:4123"
     volumes:
-      - ./models/chatterbox-voices:/app/voices
+      - ./models/chatterbox-voices:/voices
     environment:
       - USE_MULTILINGUAL_MODEL=true
+      - ENABLE_MEMORY_MONITORING=true
     deploy:
       resources:
         reservations:

@@ -22,9 +22,9 @@ class ChatterboxTTSStream:
         self,
         base_url: str = "",
         voice: str = "",
-        exaggeration: float = 0.5,
+        exaggeration: float = 0.35,
         cfg_weight: float = 0.5,
-        temperature: float = 0.8,
+        temperature: float = 0.6,
     ):
         self.base_url = (base_url or settings.chatterbox_tts_base_url).rstrip("/")
         self.voice = voice or settings.chatterbox_tts_voice
@@ -35,7 +35,7 @@ class ChatterboxTTSStream:
 
     async def connect(self):
         """Create HTTP client."""
-        self._client = httpx.AsyncClient(timeout=30.0)
+        self._client = httpx.AsyncClient(timeout=60.0)
         logger.info(f"Chatterbox TTS connected to {self.base_url}")
 
     async def synthesize_stream(self, text: str) -> AsyncGenerator[bytes, None]:
@@ -53,7 +53,6 @@ class ChatterboxTTSStream:
             return
 
         payload = {
-            "model": "chatterbox",
             "input": text,
             "voice": self.voice,
             "response_format": "wav",

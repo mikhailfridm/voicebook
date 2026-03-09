@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     yclients_company_id: str = ""
 
     # Chatterbox TTS (self-hosted, MIT license)
-    chatterbox_tts_base_url: str = "http://localhost:8150"
+    chatterbox_tts_base_url: str = "http://localhost:4123"
     chatterbox_tts_voice: str = "default"
     tts_provider: str = "chatterbox"  # "chatterbox", "fish", or "yandex"
 
