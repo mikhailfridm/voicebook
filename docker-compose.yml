@@ -44,6 +44,8 @@ services:
       - "8150:8000"
     volumes:
       - ./models/chatterbox-voices:/app/voices
+    environment:
+      - USE_MULTILINGUAL_MODEL=true
     deploy:
       resources:
         reservations:
