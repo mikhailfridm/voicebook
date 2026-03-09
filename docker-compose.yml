@@ -11,7 +11,7 @@ services:
       - .env
     depends_on:
       - vllm
-      - fish-tts
+      - chatterbox-tts
     healthcheck:
       test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health').raise_for_status()"]
       interval: 30s
@@ -36,17 +36,14 @@ services:
               count: 1
               capabilities: [gpu]
 
-  fish-tts:
-    image: fishaudio/fish-speech:latest-server-cuda
-    container_name: voicebook-fish-tts
+  chatterbox-tts:
+    image: travisvn/chatterbox-tts-api:gpu
+    container_name: voicebook-chatterbox-tts
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "8150:8000"
     volumes:
-      - ./models/fish-speech:/app/checkpoints
-      - ./models/fish-voices:/app/references
-    environment:
-      - COMPILE=1
+      - ./models/chatterbox-voices:/app/voices
     deploy:
       resources:
         reservations:
