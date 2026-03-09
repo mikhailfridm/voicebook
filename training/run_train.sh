@@ -80,9 +80,15 @@ run_dpo() {
 
 # ─── Step 4: Merge LoRA ──────────────────────────────────────────
 merge_model() {
-    echo "=== Merging LoRA into base model ==="
+    # Use DPO adapter if it exists, otherwise use SFT adapter
+    if [ -d "$MODELS_DIR/voicebook-dpo" ] && [ -f "$MODELS_DIR/voicebook-dpo/adapter_config.json" ]; then
+        LORA_PATH="$MODELS_DIR/voicebook-dpo"
+    else
+        LORA_PATH="$MODELS_DIR/voicebook-lora"
+    fi
+    echo "=== Merging LoRA from $LORA_PATH into base model ==="
     python "$FINETUNE_DIR/merge_lora.py" \
-        --lora-path "$MODELS_DIR/voicebook-dpo" \
+        --lora-path "$LORA_PATH" \
         --output "$MODELS_DIR/voicebook-qwen2.5-14b"
     echo "=== Merged model saved to $MODELS_DIR/voicebook-qwen2.5-14b ==="
 }
@@ -108,7 +114,6 @@ case "${1:-all}" in
         install_deps
         prepare_data
         run_sft
-        run_dpo
         merge_model
         echo ""
         echo "=== Training pipeline complete! ==="
