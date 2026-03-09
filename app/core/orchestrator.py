@@ -113,7 +113,10 @@ class CallOrchestrator:
 
         # Create per-call STT and TTS streams
         stt = YandexSTTStream()
-        tts = FishTTSStream() if settings.tts_provider == "fish" else YandexTTSStream()
+        if settings.tts_provider == "fish":
+            tts = FishTTSStream()
+        else:
+            tts = YandexTTSStream()
 
         try:
             await stt.connect()

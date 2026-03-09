@@ -21,10 +21,14 @@ class Settings(BaseSettings):
     yclients_user_token: str = ""
     yclients_company_id: str = ""
 
-    # Fish Speech TTS
+    # Fish Speech TTS (self-hosted)
     fish_tts_base_url: str = "http://localhost:8080"
     fish_tts_reference_id: str = ""  # saved voice model ID for cloning
-    tts_provider: str = "fish"  # "fish" or "yandex"
+    tts_provider: str = "fish"  # "fish", "chatterbox", or "yandex"
+
+    # Chatterbox TTS (self-hosted, MIT license) — alternative, not used yet
+    chatterbox_tts_base_url: str = "http://localhost:8150"
+    chatterbox_tts_voice: str = "default"
 
     # LLM
     llm_provider: str = "vllm"  # "openai", "yandexgpt", or "vllm"
