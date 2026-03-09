@@ -22,8 +22,8 @@ template: qwen
 cutoff_len: 2048
 
 ### Training
-per_device_train_batch_size: 4
-gradient_accumulation_steps: 4
+per_device_train_batch_size: 1
+gradient_accumulation_steps: 16
 learning_rate: 2.0e-4
 num_train_epochs: 3
 lr_scheduler_type: cosine
@@ -34,7 +34,7 @@ save_steps: 100
 eval_steps: 100
 
 ### Eval
-per_device_eval_batch_size: 4
+per_device_eval_batch_size: 1
 eval_strategy: steps
 
 ### Output
