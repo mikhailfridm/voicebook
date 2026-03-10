@@ -8,9 +8,9 @@ cmd = [
     sys.executable, "-m", "vllm.entrypoints.openai.api_server",
     "--model", model,
     "--dtype", "bfloat16",
-    "--max-model-len", "1024",
+    "--max-model-len", "4096",
     "--gpu-memory-utilization", "0.90",
-    "--port", "8000",
+    "--port", "8100",
 ]
 print(f"Starting vLLM: {' '.join(cmd)}")
 subprocess.run(cmd)
