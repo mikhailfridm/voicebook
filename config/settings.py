@@ -16,10 +16,18 @@ class Settings(BaseSettings):
     # OpenAI
     openai_api_key: str = ""
 
-    # Yclients
+    # Yclients (beauty, barbershop, car wash)
     yclients_partner_token: str = ""
     yclients_user_token: str = ""
     yclients_company_id: str = ""
+
+    # iiko Cloud API (restaurants)
+    iiko_api_login: str = ""
+    iiko_organization_id: str = ""
+    iiko_terminal_group_id: str = ""
+
+    # Booking provider per business type: "yclients" or "iiko"
+    booking_provider: str = "yclients"
 
     # Chatterbox TTS (self-hosted, MIT license)
     chatterbox_tts_base_url: str = "http://localhost:4123"

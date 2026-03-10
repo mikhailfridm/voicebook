@@ -2,7 +2,7 @@
 Call Orchestrator — the central component that connects all parts.
 
 Flow per call:
-  Incoming audio -> STT -> State Machine + LLM -> Yclients API -> TTS -> Outgoing audio
+  Incoming audio -> STT -> State Machine + LLM -> Booking API -> TTS -> Outgoing audio
 """
 
 import asyncio
@@ -14,6 +14,7 @@ from typing import AsyncGenerator, Optional
 from app.core.state_machine import StateMachine, SessionContext, State, Intent
 from app.llm.agent import DialogAgent
 from app.booking.yclients import YclientsClient
+from app.booking.iiko import IikoClient
 from app.stt.yandex_stt import YandexSTTStream
 from app.tts.chatterbox_tts import ChatterboxTTSStream
 from app.tts.yandex_tts import YandexTTSStream
@@ -29,7 +30,11 @@ class CallOrchestrator:
     def __init__(self, salon_config: dict):
         self.salon_config = salon_config
         self.agent = DialogAgent(salon_config)
-        self.yclients = YclientsClient()
+        self.booking_provider = salon_config.get("booking_provider", settings.booking_provider)
+        if self.booking_provider == "iiko":
+            self.booking = IikoClient()
+        else:
+            self.booking = YclientsClient()
 
         # Active sessions: call_id -> (session, state_machine)
         self._sessions: dict[str, tuple[SessionContext, StateMachine]] = {}
@@ -52,7 +57,7 @@ class CallOrchestrator:
     async def stop(self):
         for task in self._tasks.values():
             task.cancel()
-        await self.yclients.close()
+        await self.booking.close()
         logger.info("Orchestrator stopped")
 
     async def handle_new_call(self, call: IncomingCall) -> str:
@@ -133,7 +138,7 @@ class CallOrchestrator:
 
             # Look up client by phone number before greeting
             if session.caller_phone:
-                client_info = await self.yclients.lookup_client(session.caller_phone)
+                client_info = await self.booking.lookup_client(session.caller_phone)
                 if client_info and client_info.get("name"):
                     session.client_name = client_info["name"]
                     session.client_info = client_info
@@ -232,7 +237,7 @@ class CallOrchestrator:
                 target_date = None
                 if args.get("date"):
                     target_date = date.fromisoformat(args["date"])
-                slots = await self.yclients.get_available_slots(
+                slots = await self.booking.get_available_slots(
                     staff_id=args["staff_id"],
                     service_id=args["service_id"],
                     target_date=target_date,
@@ -244,7 +249,7 @@ class CallOrchestrator:
                 return {"slots": [], "reply": "К сожалению, на эту дату нет свободных слотов. Хотите посмотреть другой день?"}
 
             elif name == "create_booking":
-                result = await self.yclients.create_booking(
+                result = await self.booking.create_booking(
                     staff_id=args["staff_id"],
                     service_id=args["service_id"],
                     booking_datetime=args["datetime"],
@@ -256,7 +261,7 @@ class CallOrchestrator:
 
             elif name == "lookup_client":
                 phone = args.get("phone", session.caller_phone)
-                client_info = await self.yclients.lookup_client(phone)
+                client_info = await self.booking.lookup_client(phone)
                 if client_info:
                     session.client_name = client_info.get("name", "")
                     session.client_info = client_info
@@ -272,7 +277,7 @@ class CallOrchestrator:
             elif name == "cancel_booking":
                 record_id = args.get("record_id") or session.booking_id
                 if record_id:
-                    await self.yclients.cancel_booking(record_id)
+                    await self.booking.cancel_booking(record_id)
                     return {"status": "ok", "reply": "Запись отменена."}
                 return {"status": "error", "reply": "Не удалось найти запись для отмены."}
 
