@@ -27,7 +27,9 @@ env["PYTHONPATH"] = fish_dir
 cmd = [
     sys.executable, "tools/api_server.py",
     "--listen", "0.0.0.0:50000",
-    "--checkpoint-path", ckpt_dir,
+    "--llama-checkpoint-path", ckpt_dir,
+    "--decoder-checkpoint-path", os.path.join(ckpt_dir, "firefly-gan-vq-fsq-8x1024-21hz-generator.pth"),
+    "--half",
 ]
 
 print(f"\nStarting Fish Speech on port 50000...")
