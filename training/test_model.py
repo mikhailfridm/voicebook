@@ -63,8 +63,11 @@ for t in tests:
             "temperature": 0.7,
         }, timeout=30)
         data = r.json()
-        reply = data["choices"][0]["message"]["content"]
-        print(f"Модель: {reply}")
+        if "choices" in data:
+            reply = data["choices"][0]["message"]["content"]
+            print(f"Модель: {reply}")
+        else:
+            print(f"ОТВЕТ API: {data}")
     except Exception as e:
         print(f"ОШИБКА: {e}")
 
