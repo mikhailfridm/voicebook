@@ -23,30 +23,7 @@ def generate_sample():
         print(f"   Файл уже есть: {SAMPLE_PATH}")
         return True
 
-    # Try to generate with espeak
-    print("   Генерируем образец через espeak...")
-    result = subprocess.run(
-        ["which", "espeak-ng"], capture_output=True
-    )
-    if result.returncode != 0:
-        subprocess.run(
-            [sys.executable, "-m", "pip", "install", "pyttsx3"],
-            capture_output=True,
-        )
-        # Try espeak install
-        subprocess.run(["apt-get", "install", "-y", "espeak-ng"], capture_output=True)
-
-    # Generate with espeak-ng
-    text = "Здравствуйте, добро пожаловать. Меня зовут Анна, я администратор. Чем могу вам помочь? Давайте подберём удобное время для записи. У нас есть свободные слоты на сегодня и на завтра."
-    result = subprocess.run(
-        ["espeak-ng", "-v", "ru", "-w", SAMPLE_PATH, "-s", "130", text],
-        capture_output=True,
-    )
-    if result.returncode == 0 and os.path.exists(SAMPLE_PATH):
-        print(f"   Создан: {SAMPLE_PATH}")
-        return True
-
-    print("   espeak-ng не доступен. Создаём через Chatterbox...")
+    print("   Создаём образец через Chatterbox...")
     # Use Chatterbox itself to generate a sample, then re-upload with language
     resp = requests.post(
         f"{BASE_URL}/v1/audio/speech",
