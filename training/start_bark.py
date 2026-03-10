@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
 """Bark TTS server — natural speech with pauses and hesitations."""
 import io
+import os
 import numpy as np
-import torch
 import uvicorn
+
+# Force CPU to avoid GPU OOM (vLLM uses all GPU memory)
+os.environ["SUNO_USE_SMALL_MODELS"] = "1"
+os.environ["SUNO_OFFLOAD_CPU"] = "1"
+
+import torch
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -31,9 +37,14 @@ def numpy_to_wav_bytes(audio_array, sample_rate):
 @app.on_event("startup")
 async def startup():
     global model_loaded
-    print("Preloading Bark models (first run downloads ~5GB)...")
+    print("Preloading Bark models (small, CPU mode)...")
     from bark import preload_models
-    preload_models()
+    preload_models(
+        text_use_gpu=False,
+        coarse_use_gpu=False,
+        fine_use_gpu=False,
+        codec_use_gpu=False,
+    )
     model_loaded = True
     print("Bark models loaded!")
 
