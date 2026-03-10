@@ -3,7 +3,7 @@
 import requests
 
 URL = "http://localhost:8100/v1/chat/completions"
-MODEL = "voicebook"
+MODEL = "/workspace/voicebook/models/voicebook-qwen2.5-14b"
 
 tests = [
     {
