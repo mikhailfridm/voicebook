@@ -5,14 +5,14 @@ import sys
 import os
 
 fish_dir = "/workspace/fish-speech"
-ckpt_dir = os.path.join(fish_dir, "checkpoints", "fish-speech-1.5")
+ckpt_dir = os.path.join(fish_dir, "checkpoints", "openaudio-s1-mini")
 
 # Step 1: Download model if not exists
 if not os.path.exists(ckpt_dir):
-    print("Downloading Fish Speech 1.5 model...")
+    print("Downloading OpenAudio S1 Mini model...")
     subprocess.run([
         "huggingface-cli", "download",
-        "fishaudio/fish-speech-1.5",
+        "fishaudio/openaudio-s1-mini",
         "--local-dir", ckpt_dir,
     ], check=True)
     print("Model downloaded!")
@@ -28,7 +28,7 @@ cmd = [
     sys.executable, "tools/api_server.py",
     "--listen", "0.0.0.0:50000",
     "--llama-checkpoint-path", ckpt_dir,
-    "--decoder-checkpoint-path", os.path.join(ckpt_dir, "firefly-gan-vq-fsq-8x1024-21hz-generator.pth"),
+    "--decoder-checkpoint-path", ckpt_dir,
     "--half",
 ]
 
