@@ -184,7 +184,10 @@ class IikoClient:
         """
         await self._ensure_token()
 
-        if not client_phone.startswith("+"):
+        # Normalize Russian phone: 8XXXXXXXXXX -> +7XXXXXXXXXX
+        if client_phone.startswith("8") and len(client_phone) == 11:
+            client_phone = "+7" + client_phone[1:]
+        elif not client_phone.startswith("+"):
             client_phone = f"+{client_phone}"
 
         payload = {
@@ -244,6 +247,73 @@ class IikoClient:
         resp.raise_for_status()
         reserves = resp.json().get("reserves", [])
         return reserves[0] if reserves else None
+
+    # --- Yclients-compatible interface for orchestrator ---
+
+    async def lookup_client(self, phone: str) -> Optional[dict]:
+        """iiko has no client search. Return None."""
+        return None
+
+    async def create_booking(
+        self,
+        staff_id: int = 0,
+        service_id: int = 0,
+        booking_datetime: str = "",
+        client_name: str = "",
+        client_phone: str = "",
+        **kwargs,
+    ) -> dict:
+        """Create reservation via iiko (compatible with orchestrator interface)."""
+        # Find a suitable table for 2 guests by default
+        guests_count = kwargs.get("guests_count", 2)
+        table_id = kwargs.get("table_id", "")
+        duration = kwargs.get("duration_minutes", 120)
+
+        if not table_id:
+            # Auto-select first available table
+            from datetime import datetime as dt
+            try:
+                target_date = dt.strptime(booking_datetime[:10], "%Y-%m-%d").date()
+            except (ValueError, IndexError):
+                target_date = None
+            slots = await self.get_available_slots(
+                target_date=target_date,
+                guests_count=guests_count,
+                duration_minutes=duration,
+            )
+            # Find slot matching requested time
+            requested_time = booking_datetime[11:16] if len(booking_datetime) > 15 else ""
+            for slot in slots:
+                if slot["time"] == requested_time:
+                    table_id = slot["table_id"]
+                    break
+            if not table_id and slots:
+                table_id = slots[0]["table_id"]
+
+        if not table_id:
+            return {"status": "error", "message": "No tables available"}
+
+        # Format datetime for iiko
+        if len(booking_datetime) <= 16:
+            booking_datetime = booking_datetime + ":00.000" if len(booking_datetime) == 16 else booking_datetime
+            if len(booking_datetime) == 10:
+                booking_datetime += " 12:00:00.000"
+        if "." not in booking_datetime:
+            booking_datetime += ".000"
+
+        return await self.create_reservation(
+            table_id=table_id,
+            start_time=booking_datetime,
+            guests_count=guests_count,
+            client_name=client_name,
+            client_phone=client_phone,
+            duration_minutes=duration,
+        )
+
+    async def cancel_booking(self, record_id: str = "") -> bool:
+        """iiko cancellation happens on POS side. Log and return True."""
+        logger.warning(f"iiko cancel requested for {record_id} — cancellation is managed on POS terminal")
+        return True
 
     async def close(self):
         await self._client.aclose()
