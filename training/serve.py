@@ -9,7 +9,7 @@ cmd = [
     "--model", model,
     "--dtype", "bfloat16",
     "--max-model-len", "1024",
-    "--gpu-memory-utilization", "0.75",
+    "--gpu-memory-utilization", "0.90",
     "--port", "8000",
 ]
 print(f"Starting vLLM: {' '.join(cmd)}")

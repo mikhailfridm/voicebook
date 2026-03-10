@@ -169,21 +169,43 @@ def main(dialogs_path: str, intents_path: str, output_dir: str, dpo_path: str = 
     all_examples = []
     raw_examples = []
 
-    # Load dialogs
-    if Path(dialogs_path).exists():
-        with open(dialogs_path, encoding="utf-8") as f:
+    # Load dialogs (supports both 'messages' and 'conversations' formats)
+    dialog_files = [p.strip() for p in dialogs_path.split(",")]
+    for dpath in dialog_files:
+        if not Path(dpath).exists():
+            logger.warning(f"File not found: {dpath}")
+            continue
+        file_count = 0
+        with open(dpath, encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if not line:
                     continue
                 example = json.loads(line)
                 raw_examples.append(example)
-                transformed = transform_messages(example.get("messages", []))
-                if validate_transformed(transformed):
-                    all_examples.append({"conversations": transformed})
+                # Handle both formats
+                if "conversations" in example:
+                    msgs = example["conversations"]
+                    # Already in conversations format — just normalize roles
+                    transformed = []
+                    for msg in msgs:
+                        if "from" in msg:
+                            transformed.append(msg)
+                        else:
+                            role = ROLE_MAP.get(msg.get("role", ""), msg.get("role", ""))
+                            transformed.append({"from": role, "value": msg.get("content", "")})
+                    if validate_transformed(transformed):
+                        all_examples.append({"conversations": transformed})
+                        file_count += 1
+                elif "messages" in example:
+                    transformed = transform_messages(example["messages"])
+                    if validate_transformed(transformed):
+                        all_examples.append({"conversations": transformed})
+                        file_count += 1
                 else:
-                    logger.warning("Invalid dialog after transform, skipping")
-        logger.info(f"Loaded {len(all_examples)} valid dialogs")
+                    logger.warning("Unknown format, skipping")
+        logger.info(f"Loaded {file_count} valid dialogs from {dpath}")
+    logger.info(f"Total dialogs: {len(all_examples)}")
 
     # Load intent pairs
     intent_count = 0

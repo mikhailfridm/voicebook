@@ -30,8 +30,16 @@ install_deps() {
 # ─── Step 1: Prepare dataset ─────────────────────────────────────
 prepare_data() {
     echo "=== Preparing dataset ==="
+    # Collect all dialog files (barbershop + beauty salon + restaurant + car wash)
+    DIALOG_FILES="$DATASET_DIR/sft_dialogs.jsonl"
+    for extra in beauty_salon_dialogs beauty_salon_dialogs_extra restaurant_dialogs restaurant_dialogs_extra carwash_dialogs carwash_dialogs_extra; do
+        if [ -f "$DATASET_DIR/${extra}.jsonl" ]; then
+            DIALOG_FILES="$DIALOG_FILES,$DATASET_DIR/${extra}.jsonl"
+        fi
+    done
+
     python "$DATASET_DIR/convert_to_chatml.py" \
-        --dialogs "$DATASET_DIR/sft_dialogs.jsonl" \
+        --dialogs "$DIALOG_FILES" \
         --intents "$DATASET_DIR/raw/intent_pairs.jsonl" \
         --dpo "$DATASET_DIR/dpo_pairs.jsonl" \
         --output-dir "$DATASET_DIR/processed/"
