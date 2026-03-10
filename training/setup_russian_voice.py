@@ -24,11 +24,11 @@ def generate_sample():
         return True
 
     print("   Создаём образец через Chatterbox...")
-    # Use Chatterbox itself to generate a sample, then re-upload with language
+    sample_text = "Здравствуйте, добро пожаловать. Меня зовут Анна, я администратор. Чем могу вам помочь? Давайте подберём удобное время для записи. У нас есть свободные слоты на сегодня и на завтра."
     resp = requests.post(
         f"{BASE_URL}/v1/audio/speech",
         json={
-            "input": text,
+            "input": sample_text,
             "voice": "default",
             "response_format": "wav",
         },
