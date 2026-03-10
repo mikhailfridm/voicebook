@@ -1,41 +1,31 @@
 #!/usr/bin/env python3
-"""Test Bark TTS — generate Russian speech samples with different speakers."""
+"""Test Bark TTS — generate Russian speech samples (CPU mode, long timeout)."""
 import requests
 import sys
 
 BASE_URL = "http://localhost:50000"
 
-# Russian speakers in Bark (v2/ru_speaker_0 to v2/ru_speaker_9)
-# Each has a different voice character
+# Test 3 most distinct Russian speakers
 SPEAKERS = [
-    ("v2/ru_speaker_0", "Голос 0 — женский"),
-    ("v2/ru_speaker_1", "Голос 1"),
-    ("v2/ru_speaker_2", "Голос 2"),
-    ("v2/ru_speaker_3", "Голос 3"),
-    ("v2/ru_speaker_4", "Голос 4"),
-    ("v2/ru_speaker_5", "Голос 5 — женский мягкий"),
-    ("v2/ru_speaker_6", "Голос 6"),
-    ("v2/ru_speaker_7", "Голос 7"),
-    ("v2/ru_speaker_8", "Голос 8"),
+    ("v2/ru_speaker_0", "Голос 0"),
+    ("v2/ru_speaker_5", "Голос 5"),
     ("v2/ru_speaker_9", "Голос 9"),
 ]
 
-TEXT = "Здравствуйте! Добро пожаловать в наш салон. Чем могу вам помочь? Давайте подберём удобное время."
+# Short text for faster generation on CPU
+TEXT = "Здравствуйте! Чем могу помочь?"
 
 
 def main():
-    # Check health
     print("Проверяем сервер...")
     try:
         r = requests.get(f"{BASE_URL}/health", timeout=5)
         print(f"Статус: {r.json()}\n")
     except Exception as e:
         print(f"Сервер не доступен: {e}")
-        print("Запустите: python /workspace/voicebook/training/start_bark.py")
         sys.exit(1)
 
-    print(f"Генерируем {len(SPEAKERS)} голосов...\n")
-    print("(Bark генерирует ~10-15 сек на фразу, подождите)\n")
+    print(f"Генерируем {len(SPEAKERS)} голосов (CPU — ~3-5 мин каждый)...\n")
 
     for speaker_id, desc in SPEAKERS:
         out_path = f"/workspace/bark_test_{speaker_id.replace('/', '_')}.wav"
@@ -44,7 +34,7 @@ def main():
             resp = requests.post(
                 f"{BASE_URL}/api/tts",
                 json={"text": TEXT, "speaker": speaker_id},
-                timeout=120,
+                timeout=600,  # 10 min timeout for CPU
             )
             if resp.status_code == 200:
                 with open(out_path, "wb") as f:
