@@ -37,6 +37,12 @@ eval_steps: 100
 per_device_eval_batch_size: 4
 eval_strategy: steps
 
+### Best model selection
+load_best_model_at_end: true
+save_total_limit: 3
+metric_for_best_model: eval_loss
+greater_is_better: false
+
 ### Output
 output_dir: /workspace/voicebook/models/voicebook-lora
 overwrite_output_dir: true

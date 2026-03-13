@@ -144,7 +144,17 @@ def transform_dpo(example: dict) -> dict:
 def validate_transformed(messages: list[dict]) -> bool:
     has_human = any(m["from"] == "human" for m in messages)
     has_gpt = any(m["from"] == "gpt" for m in messages)
-    return len(messages) >= 2 and has_human and has_gpt
+    if len(messages) < 2 or not has_human or not has_gpt:
+        return False
+    # Verify alternating human/gpt after optional system
+    i = 1 if messages[0]["from"] == "system" else 0
+    expected = "human"
+    while i < len(messages):
+        if messages[i]["from"] != expected:
+            return False
+        expected = "gpt" if expected == "human" else "human"
+        i += 1
+    return messages[-1]["from"] == "gpt"
 
 
 def extract_intents(example: dict) -> list[str]:
@@ -186,14 +196,23 @@ def main(dialogs_path: str, intents_path: str, output_dir: str, dpo_path: str = 
                 # Handle both formats
                 if "conversations" in example:
                     msgs = example["conversations"]
-                    # Already in conversations format — just normalize roles
+                    # Already in conversations format — normalize roles
                     transformed = []
                     for msg in msgs:
                         if "from" in msg:
-                            transformed.append(msg)
+                            m = dict(msg)
                         else:
                             role = ROLE_MAP.get(msg.get("role", ""), msg.get("role", ""))
-                            transformed.append({"from": role, "value": msg.get("content", "")})
+                            m = {"from": role, "value": msg.get("content", "")}
+                        # Merge consecutive same-role messages
+                        if transformed and transformed[-1]["from"] == m["from"] and m["from"] != "system":
+                            transformed[-1]["value"] += " " + m["value"]
+                        else:
+                            transformed.append(m)
+                    # Ensure first non-system message is "human"
+                    first_ns = next((i for i, m in enumerate(transformed) if m["from"] != "system"), 0)
+                    if transformed and transformed[first_ns]["from"] == "gpt":
+                        transformed.insert(first_ns, {"from": "human", "value": "[Входящий звонок]"})
                     if validate_transformed(transformed):
                         all_examples.append({"conversations": transformed})
                         file_count += 1
